@@ -97,7 +97,10 @@
                     <button type="button" class="mode-btn btn-push p-2.5 rounded-xl border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900" data-mode="add2_1">
                         ➕ 2けた ＋ 1けた
                     </button>
-                    <button type="button" class="mode-btn btn-push p-2.5 rounded-xl border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900 col-span-2" data-mode="add2_2">
+                    <button type="button" class="mode-btn btn-push p-2.5 rounded-xl border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900" data-mode="mul2_1">
+                        ✖️ 2けた × 1けた
+                    </button>
+                    <button type="button" class="mode-btn btn-push p-2.5 rounded-xl border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900" data-mode="add2_2">
                         ➕ 2けた ＋ 2けた
                     </button>
                 </div>
@@ -260,6 +263,7 @@
                 <button class="rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 whitespace-nowrap" data-mode="div2_1">2けた÷1けた</button>
                 <button class="rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 whitespace-nowrap" data-mode="sub2_1">2けた－1けた</button>
                 <button class="rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 whitespace-nowrap" data-mode="add2_1">2けた＋1けた</button>
+                <button class="rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 whitespace-nowrap" data-mode="mul2_1">2けた×1けた</button>
                 <button class="rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 whitespace-nowrap" data-mode="add2_2">2けた＋2けた</button>
             </div>
 
@@ -284,17 +288,11 @@
     <script type="module">
         // =========================================================================
         // 📊 【管理者用】Googleスプレッドシート連携設定
-        // 発行された Google Apps Script (GAS) のウェブアプリURL（末尾が /exec のもの）を
-        // 以下のダブルクォーテーションの間に直接貼り付けて保存してください。
-        // （例: "https://script.google.com/macros/s/AKfycb.../exec"）
+        // 発行したGoogle Apps ScriptのウェブアプリURLをここに貼り付けてください
         // =========================================================================
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby0gs5IT3JDjBTZhUNRlQiEnV_uh9tXyrthzDkDgo2S2fjboMLdJi21LStEdrM9bB_E/exec"; 
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz8vRbs503nUqiQV3PAiMAWrGIWyf0LfAYdcXmdrfJ51EZJooTxYnoqHnPH6wQUdyAP/exec"; 
 
-        let db = null;
-        let auth = null;
-        let appId = typeof __app_id !== 'undefined' ? __app_id : 'math-drill-app';
-
-        // Safe localStorage helper for local file:// execution
+        // Safe localStorage helper for local execution
         function getStorageItem(key, fallback = "") {
             try {
                 return localStorage.getItem(key) || fallback;
@@ -307,6 +305,16 @@
             try {
                 localStorage.setItem(key, value);
             } catch (e) {}
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -372,51 +380,6 @@
             }
         }
 
-        async function initFirebase() {
-            if (typeof __firebase_config !== 'undefined' && window.location.protocol !== 'file:') {
-                try {
-                    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
-                    const { getAuth, signInAnonymously, signInWithCustomToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
-                    const { getFirestore, collection, addDoc, onSnapshot } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-
-                    const firebaseConfig = JSON.parse(__firebase_config);
-                    const app = initializeApp(firebaseConfig);
-                    db = getFirestore(app);
-                    auth = getAuth(app);
-
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                    listenToLeaderboard(collection, onSnapshot);
-                    return;
-                } catch (e) {
-                    console.warn("Firebase skipped or offline environment. Falling back to Local Storage.", e);
-                }
-            }
-            loadLocalLeaderboard();
-        }
-
-        initFirebase();
-
-        const LOCAL_RANKING_KEY = "math_drill_rankings";
-
-        // Game State Variables
-        let questions = [];
-        let currentQIndex = 0;
-        let missCount = 0;
-        let userInput = "";
-        let startTime = 0;
-        let timerInterval = null;
-        let elapsedMs = 0;
-        let wrongList = [];
-        let studentName = getStorageItem("math_drill_student_name", "");
-
-        let selectedMode = "mix";
-        let modalTabMode = "mix";
-        let allScores = [];
-
         const MODE_NAMES = {
             'mix': 'ぜんぶミックス',
             'add1_1': '1けた ＋ 1けた',
@@ -424,566 +387,486 @@
             'div2_1': '2けた ÷ 1けた',
             'sub2_1': '2けた － 1けた',
             'add2_1': '2けた ＋ 1けた',
+            'mul2_1': '2けた × 1けた',
             'add2_2': '2けた ＋ 2けた'
         };
 
-        function createQuestion(type) {
-            if (type === 'add1_1') {
-                const a = Math.floor(Math.random() * 9) + 1;
-                const b = Math.floor(Math.random() * 9) + 1;
-                return { category: '1けた ＋ 1けた', expr: `${a} + ${b} =`, answer: a + b };
-            } else if (type === 'kuku') {
-                const a = Math.floor(Math.random() * 9) + 1;
-                const b = Math.floor(Math.random() * 9) + 1;
-                return { category: '九九（かけ算）', expr: `${a} × ${b} =`, answer: a * b };
-            } else if (type === 'div2_1') {
-                const ans = Math.floor(Math.random() * 9) + 1;
-                const div = Math.floor(Math.random() * 8) + 2;
-                return { category: '2けた ÷ 1けた', expr: `${ans * div} ÷ ${div} =`, answer: ans };
-            } else if (type === 'sub2_1') {
-                const a = Math.floor(Math.random() * 89) + 10;
-                const b = Math.floor(Math.random() * 9) + 1;
-                return { category: '2けた － 1けた', expr: `${a} － ${b} =`, answer: a - b };
-            } else if (type === 'add2_1') {
-                const a = Math.floor(Math.random() * 89) + 10;
-                const b = Math.floor(Math.random() * 9) + 1;
-                return { category: '2けた ＋ 1けた', expr: `${a} + ${b} =`, answer: a + b };
-            } else if (type === 'add2_2') {
-                const a = Math.floor(Math.random() * 89) + 10;
-                const b = Math.floor(Math.random() * 89) + 10;
-                return { category: '2けた ＋ 2けた', expr: `${a} + ${b} =`, answer: a + b };
+        // Custom Modal Alert helper
+        function customAlert(msg) {
+            const modal = document.getElementById('custom-alert-modal');
+            const msgEl = document.getElementById('custom-alert-msg');
+            if (msgEl && modal) {
+                msgEl.innerText = msg;
+                modal.classList.remove('hidden');
             }
         }
 
-        function generateQuestions(mode) {
-            const result = [];
-            if (mode === 'mix') {
-                const types = ['add1_1', 'kuku', 'div2_1', 'sub2_1', 'add2_1', 'add2_2'];
-                types.forEach(type => {
-                    for (let i = 0; i < 5; i++) {
-                        result.push(createQuestion(type));
-                    }
-                });
-                for (let i = result.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [result[i], result[j]] = [result[j], result[i]];
-                }
-            } else {
-                for (let i = 0; i < 30; i++) {
-                    result.push(createQuestion(mode));
-                }
-            }
-            return result;
-        }
-
-        // Mode selector button events
-        document.querySelectorAll(".mode-btn").forEach(btn => {
-            btn.addEventListener("click", () => {
-                document.querySelectorAll(".mode-btn").forEach(b => {
-                    b.classList.remove("bg-amber-500", "text-white", "border-amber-500", "font-black", "shadow");
-                    b.classList.add("bg-amber-50", "text-amber-900", "border-amber-200");
-                });
-                btn.classList.remove("bg-amber-50", "text-amber-900", "border-amber-200");
-                btn.classList.add("bg-amber-500", "text-white", "border-amber-500", "font-black", "shadow");
-                
-                selectedMode = btn.getAttribute("data-mode");
-                const labelEl = document.getElementById("start-mode-label");
-                if (labelEl) labelEl.textContent = MODE_NAMES[selectedMode];
-
-                renderLeaderboard(allScores);
-            });
+        document.getElementById('custom-alert-btn')?.addEventListener('click', () => {
+            document.getElementById('custom-alert-modal')?.classList.add('hidden');
         });
 
-        // UI Reference Variables
-        const screenStart = document.getElementById("screen-start");
-        const screenGame = document.getElementById("screen-game");
-        const screenResult = document.getElementById("screen-result");
-
-        const inputName = document.getElementById("student-name");
-        const btnStart = document.getElementById("btn-start");
-        const btnRetry = document.getElementById("btn-retry");
-
-        const qNumEl = document.getElementById("current-q-num");
-        const missCountEl = document.getElementById("miss-count");
-        const penaltySecEl = document.getElementById("penalty-sec");
-        const timerDisplayEl = document.getElementById("timer-display");
-        const progressBarEl = document.getElementById("progress-bar");
-        const qCategoryEl = document.getElementById("q-category");
-        const qExpressionEl = document.getElementById("q-expression");
-        const answerInputEl = document.getElementById("answer-input");
-
-        if (studentName) {
-            inputName.value = studentName;
-        }
-
-        btnStart.addEventListener("click", startGame);
-        btnRetry.addEventListener("click", () => {
-            screenResult.classList.add("hidden");
-            screenStart.classList.remove("hidden");
-            renderLeaderboard(allScores);
-        });
-
-        document.querySelectorAll(".key-btn").forEach(btn => {
-            btn.addEventListener("click", () => {
-                handleInputKey(btn.getAttribute("data-key"));
-            });
-        });
-
-        document.addEventListener("keydown", (e) => {
-            if (screenGame.classList.contains("hidden")) return;
-            if (e.key >= "0" && e.key <= "9") {
-                handleInputKey(e.key);
-            } else if (e.key === "Backspace" || e.key === "Delete") {
-                handleInputKey("clear");
-            } else if (e.key === "Enter") {
-                handleInputKey("enter");
-            }
-        });
-
+        // Format milliseconds to MM:SS.s
         function formatTime(ms) {
-            const totalSec = ms / 1000;
-            const mins = Math.floor(totalSec / 60);
-            const secs = (totalSec % 60).toFixed(1);
-            const padMins = String(mins).padStart(2, '0');
-            const padSecs = String(secs).padStart(4, '0');
-            return `${padMins}:${padSecs}`;
+            const totalSec = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSec / 60);
+            const seconds = totalSec % 60;
+            const tenths = Math.floor((ms % 1000) / 100);
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${tenths}`;
         }
 
-        function startGame() {
-            const errorMsg = document.getElementById("name-error-msg");
-            if (errorMsg) errorMsg.classList.add("hidden");
-
-            const name = inputName.value.trim();
-            if (!name) {
-                if (errorMsg) errorMsg.classList.remove("hidden");
-                inputName.focus();
-                return;
-            }
-
-            studentName = name;
-            setStorageItem("math_drill_student_name", studentName);
-
-            initAudio();
-
-            questions = generateQuestions(selectedMode);
-            currentQIndex = 0;
-            missCount = 0;
-            userInput = "";
-            wrongList = [];
-            elapsedMs = 0;
-
-            screenStart.classList.add("hidden");
-            screenResult.classList.add("hidden");
-            screenGame.classList.remove("hidden");
-
-            updateUIForQuestion();
-
-            startTime = Date.now();
-            if (timerInterval) clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                elapsedMs = Date.now() - startTime;
-                timerDisplayEl.textContent = formatTime(elapsedMs);
-            }, 100);
-        }
-
-        function updateUIForQuestion() {
-            const q = questions[currentQIndex];
-            qNumEl.textContent = currentQIndex + 1;
-            missCountEl.textContent = missCount;
-            penaltySecEl.textContent = missCount * 10;
-            
-            const progress = ((currentQIndex) / questions.length) * 100;
-            progressBarEl.style.width = `${progress}%`;
-
-            qCategoryEl.textContent = q.category;
-            qExpressionEl.textContent = q.expr;
-            userInput = "";
-            renderInput();
-        }
-
-        function renderInput() {
-            answerInputEl.textContent = userInput;
-        }
-
-        function triggerPenaltyAnimation() {
-            const container = document.getElementById("penalty-toast-container");
-            const toast = document.createElement("div");
-            toast.className = "penalty-pop absolute font-black text-2xl text-rose-600 bg-rose-100 border-2 border-rose-400 px-3 py-1 rounded-full shadow-lg whitespace-nowrap";
-            toast.textContent = "＋10秒！";
+        // Penalty floating toast animation
+        function showPenaltyToast() {
+            const container = document.getElementById('penalty-toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = 'penalty-pop absolute text-rose-600 font-black text-2xl sm:text-3xl drop-shadow-md whitespace-nowrap pointer-events-none z-50';
+            toast.innerText = '+10秒！';
             container.appendChild(toast);
             setTimeout(() => toast.remove(), 800);
         }
 
-        function handleInputKey(key) {
-            initAudio();
-            if (key === "clear") {
-                userInput = "";
-            } else if (key === "enter") {
-                checkAnswer();
-                return;
-            } else {
-                if (userInput.length < 4) {
-                    userInput += key;
-                }
-            }
-            renderInput();
-        }
-
-        function checkAnswer() {
-            if (userInput.trim() === "") return;
-
-            const q = questions[currentQIndex];
-            const userNum = parseInt(userInput, 10);
-
-            if (userNum === q.answer) {
-                playSound('correct');
-                currentQIndex++;
-                if (currentQIndex >= questions.length) {
-                    endGame();
-                } else {
-                    updateUIForQuestion();
-                }
-            } else {
-                missCount++;
-                playSound('wrong');
-                triggerPenaltyAnimation();
-                wrongList.push({
-                    qIndex: currentQIndex + 1,
-                    expr: q.expr,
-                    userAns: userNum,
-                    correctAns: q.answer
-                });
-                userInput = "";
-                renderInput();
-                missCountEl.textContent = missCount;
-                penaltySecEl.textContent = missCount * 10;
-            }
-        }
-
-        function endGame() {
-            if (timerInterval) clearInterval(timerInterval);
-
-            const rawTimeSec = elapsedMs / 1000;
-            const penaltySec = missCount * 10;
-            const finalTimeSec = rawTimeSec + penaltySec;
-
-            playSound('fanfare');
-            startConfetti();
-
-            screenGame.classList.add("hidden");
-            screenResult.classList.remove("hidden");
-
-            document.getElementById("result-student-name").textContent = `${studentName} さんの記録`;
-            document.getElementById("res-raw-time").textContent = formatTime(elapsedMs);
-            document.getElementById("res-miss-count").textContent = missCount;
-            document.getElementById("res-penalty").textContent = `+${penaltySec}秒`;
-            document.getElementById("res-final-time").textContent = formatTime(finalTimeSec * 1000);
-
-            // Incorrect Questions Review List
-            const reviewBox = document.getElementById("review-box");
-            const reviewList = document.getElementById("review-list");
-            if (wrongList.length > 0) {
-                reviewBox.classList.remove("hidden");
-                reviewList.innerHTML = wrongList.map(item => `
-                    <div class="flex justify-between items-center text-xs bg-rose-100/70 p-1.5 rounded-lg border border-rose-200">
-                        <span class="font-bold text-rose-900">問${item.qIndex}: ${item.expr}</span>
-                        <span class="text-rose-700">誤: <s class="text-rose-500">${item.userAns}</s> ➔ 正: <b class="text-emerald-700">${item.correctAns}</b></span>
-                    </div>
-                `).join("");
-            } else {
-                reviewBox.classList.add("hidden");
-            }
-
-            saveScore(studentName, selectedMode, finalTimeSec, rawTimeSec, missCount);
-        }
-
-        const customAlertBtn = document.getElementById("custom-alert-btn");
-        if (customAlertBtn) {
-            customAlertBtn.addEventListener("click", () => {
-                document.getElementById("custom-alert-modal").classList.add("hidden");
-            });
-        }
-
-        function sendToGoogleSheet(record) {
-            const gasUrl = typeof GAS_WEB_APP_URL !== 'undefined' ? GAS_WEB_APP_URL.trim() : "";
-            const sheetStatus = document.getElementById("sheet-status");
-            if (sheetStatus) sheetStatus.classList.add("hidden");
-
-            if (!gasUrl) return;
-
-            const payload = {
-                date: record.dateStr,
-                name: record.studentName,
-                mode: MODE_NAMES[record.mode] || record.mode,
-                timeText: formatTime(record.totalTime * 1000),
-                rawTimeText: formatTime(record.rawTime * 1000),
-                missCount: record.missCount
-            };
-
-            // Using no-cors and text/plain to avoid CORS options preflight blocking
-            fetch(gasUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify(payload)
-            }).then(() => {
-                if (sheetStatus) sheetStatus.classList.remove("hidden");
-            }).catch(err => {
-                console.error("Google Sheet error:", err);
-            });
-        }
-
-        async function saveScore(name, mode, totalTimeSec, rawTimeSec, miss) {
-            const now = new Date();
-            const dateStr = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
-
-            const record = {
-                studentName: name,
-                mode: mode,
-                totalTime: Math.round(totalTimeSec * 10) / 10,
-                rawTime: Math.round(rawTimeSec * 10) / 10,
-                missCount: miss,
-                dateStr: dateStr,
-                createdAt: new Date().toISOString()
-            };
-
-            sendToGoogleSheet(record);
-
-            if (db) {
-                try {
-                    const colPath = `artifacts/${appId}/public/data/rankings`;
-                    const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                    await addDoc(collection(db, colPath), record);
-                } catch (e) {
-                    saveLocalScore(record);
-                }
-            } else {
-                saveLocalScore(record);
-            }
-        }
-
-        function saveLocalScore(record) {
-            let list = [];
+        function getLocalScores() {
             try {
-                list = JSON.parse(getStorageItem(LOCAL_RANKING_KEY, "[]"));
+                const data = getStorageItem('math_drill_scores', '[]');
+                return JSON.parse(data);
             } catch (e) {
-                list = [];
-            }
-            list.push(record);
-            list.sort((a, b) => a.totalTime - b.totalTime);
-            list = list.slice(0, 100);
-            setStorageItem(LOCAL_RANKING_KEY, JSON.stringify(list));
-            allScores = list;
-            renderLeaderboard(list);
-        }
-
-        function loadLocalLeaderboard() {
-            let list = [];
-            try {
-                list = JSON.parse(getStorageItem(LOCAL_RANKING_KEY, "[]"));
-            } catch (e) {
-                list = [];
-            }
-            allScores = list;
-            renderLeaderboard(list);
-        }
-
-        function listenToLeaderboard(collection, onSnapshot) {
-            if (!db) return;
-            try {
-                const colPath = `artifacts/${appId}/public/data/rankings`;
-                onSnapshot(collection(db, colPath), (snapshot) => {
-                    const list = [];
-                    snapshot.forEach((doc) => {
-                        list.push(doc.data());
-                    });
-                    list.sort((a, b) => a.totalTime - b.totalTime);
-                    allScores = list;
-                    renderLeaderboard(list);
-                }, (error) => {
-                    loadLocalLeaderboard();
-                });
-            } catch (e) {
-                loadLocalLeaderboard();
+                return [];
             }
         }
 
-        function renderLeaderboard(list) {
-            allScores = list;
-            const filteredList = list.filter(item => (item.mode || 'mix') === selectedMode);
+        function saveLocalScore(scoreObj) {
+            const current = getLocalScores();
+            current.push(scoreObj);
+            setStorageItem('math_drill_scores', JSON.stringify(current));
+        }
 
-            const containers = [
-                document.getElementById("start-leaderboard"),
-                document.getElementById("result-leaderboard")
-            ];
+        // 全体ランキングを取得して描画（ローカルを初期表示後にオンラインデータ取得）
+        async function renderLeaderboardList(elementId, mode, limit = 10) {
+            const container = document.getElementById(elementId);
+            if (!container) return;
 
-            containers.forEach(container => {
-                if (!container) return;
-                container.innerHTML = "";
+            // まずローカルデータを即座に表示してレスポンスを向上
+            const localScores = getLocalScores().filter(s => s.mode === mode);
+            
+            const displayList = (scoreList) => {
+                scoreList.sort((a, b) => a.finalTime - b.finalTime);
 
-                if (filteredList.length === 0) {
-                    container.innerHTML = `<p class="text-center text-gray-400 py-3">このモードの記録はまだありません</p>`;
+                if (scoreList.length === 0) {
+                    container.innerHTML = '<p class="text-center text-gray-400 py-3">まだきろくがありません</p>';
                     return;
                 }
 
-                filteredList.slice(0, 10).forEach((item, index) => {
-                    const rankNum = index + 1;
-                    let rankBadge = `<span class="w-6 text-center font-bold text-gray-500">${rankNum}</span>`;
-                    if (rankNum === 1) rankBadge = `<span class="w-6 text-center text-yellow-500 font-black"><i class="fa-solid fa-crown"></i></span>`;
-                    else if (rankNum === 2) rankBadge = `<span class="w-6 text-center text-slate-400 font-bold">2</span>`;
-                    else if (rankNum === 3) rankBadge = `<span class="w-6 text-center text-amber-600 font-bold">3</span>`;
+                const topScores = scoreList.slice(0, limit);
+                let html = '';
+                topScores.forEach((s, idx) => {
+                    let badgeClass = "bg-slate-100 text-slate-700";
+                    let rankIcon = `${idx + 1}`;
+                    if (idx === 0) {
+                        badgeClass = "bg-yellow-100 text-yellow-800 font-bold border border-yellow-300";
+                        rankIcon = '<i class="fa-solid fa-crown text-yellow-500"></i> 1位';
+                    } else if (idx === 1) {
+                        badgeClass = "bg-slate-200 text-slate-800 font-bold";
+                        rankIcon = '2位';
+                    } else if (idx === 2) {
+                        badgeClass = "bg-amber-100 text-amber-800 font-bold";
+                        rankIcon = '3位';
+                    }
 
-                    const row = document.createElement("div");
-                    row.className = "flex justify-between items-center bg-amber-50/70 p-1.5 sm:p-2 rounded-xl border border-amber-100 hover:bg-amber-100/50 transition";
-                    row.innerHTML = `
-                        <div class="flex items-center gap-2 overflow-hidden">
-                            ${rankBadge}
-                            <span class="font-bold text-gray-800 truncate">${escapeHtml(item.studentName)}</span>
-                        </div>
-                        <div class="text-right flex-shrink-0">
-                            <span class="font-black font-mono text-indigo-700">${formatTime(item.totalTime * 1000)}</span>
-                            ${item.missCount > 0 ? `<span class="text-[10px] text-rose-500 block">(${item.missCount}ミス)</span>` : ''}
+                    html += `
+                        <div class="flex items-center justify-between p-2 rounded-xl ${badgeClass} text-xs">
+                            <div class="flex items-center gap-2 overflow-hidden">
+                                <span class="w-12 shrink-0 font-bold">${rankIcon}</span>
+                                <span class="font-bold truncate">${escapeHtml(s.name)}</span>
+                            </div>
+                            <div class="text-right shrink-0 font-mono font-bold">
+                                <span>${formatTime(s.finalTime * 1000)}</span>
+                                ${s.missCount > 0 ? `<span class="text-[10px] text-rose-500 block">(${s.missCount}ミス)</span>` : ''}
+                            </div>
                         </div>
                     `;
-                    container.appendChild(row);
                 });
-            });
+                container.innerHTML = html;
+            };
 
-            renderModalLeaderboard();
-        }
+            displayList(localScores);
 
-        function renderModalLeaderboard() {
-            const container = document.getElementById("modal-leaderboard-list");
-            if (!container) return;
-            container.innerHTML = "";
-
-            const filteredList = allScores.filter(item => (item.mode || 'mix') === modalTabMode);
-
-            if (filteredList.length === 0) {
-                container.innerHTML = `<p class="text-center text-gray-400 py-8">このモードの記録はまだありません</p>`;
-                return;
-            }
-
-            filteredList.forEach((item, index) => {
-                const rankNum = index + 1;
-                let rankBadge = `<span class="w-7 text-center font-bold text-gray-500">${rankNum}</span>`;
-                if (rankNum === 1) rankBadge = `<span class="w-7 text-center text-yellow-500 font-black text-lg"><i class="fa-solid fa-crown"></i></span>`;
-                else if (rankNum === 2) rankBadge = `<span class="w-7 text-center text-slate-400 font-bold">2</span>`;
-                else if (rankNum === 3) rankBadge = `<span class="w-7 text-center text-amber-600 font-bold">3</span>`;
-
-                const row = document.createElement("div");
-                row.className = "flex justify-between items-center bg-amber-50/70 p-2 rounded-xl border border-amber-100";
-                row.innerHTML = `
-                    <div class="flex items-center gap-2 overflow-hidden">
-                        ${rankBadge}
-                        <div>
-                            <span class="font-bold text-gray-800 block truncate">${escapeHtml(item.studentName)}</span>
-                            <span class="text-[10px] text-gray-400 block">${escapeHtml(item.dateStr || '')}</span>
-                        </div>
-                    </div>
-                    <div class="text-right flex-shrink-0">
-                        <span class="font-black font-mono text-indigo-700 text-base">${formatTime(item.totalTime * 1000)}</span>
-                        ${item.missCount > 0 ? `<span class="text-[10px] text-rose-500 block">(${item.missCount}ミス)</span>` : '<span class="text-[10px] text-emerald-600 block">ノーミス!</span>'}
-                    </div>
-                `;
-                container.appendChild(row);
-            });
-        }
-
-        const btnOpenRanking = document.getElementById("btn-open-ranking");
-        const btnCloseRanking = document.getElementById("btn-close-ranking");
-        const modalRanking = document.getElementById("modal-ranking");
-
-        if (btnOpenRanking) {
-            btnOpenRanking.addEventListener("click", () => {
-                modalTabMode = selectedMode;
-                updateModalTabs();
-                renderModalLeaderboard();
-                modalRanking.classList.remove("hidden");
-            });
-        }
-
-        if (btnCloseRanking) {
-            btnCloseRanking.addEventListener("click", () => {
-                modalRanking.classList.add("hidden");
-            });
-        }
-
-        document.querySelectorAll(".rank-tab-btn").forEach(tab => {
-            tab.addEventListener("click", () => {
-                modalTabMode = tab.getAttribute("data-mode");
-                updateModalTabs();
-                renderModalLeaderboard();
-            });
-        });
-
-        function updateModalTabs() {
-            document.querySelectorAll(".rank-tab-btn").forEach(tab => {
-                if (tab.getAttribute("data-mode") === modalTabMode) {
-                    tab.className = "rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-500 text-white font-bold whitespace-nowrap shadow";
-                } else {
-                    tab.className = "rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 font-bold whitespace-nowrap";
+            // GAS Web App URLが有効な場合、オンライン全体データを非同期取得して更新
+            if (GAS_WEB_APP_URL && !GAS_WEB_APP_URL.includes("YOUR_GAS_URL_HERE")) {
+                try {
+                    const res = await fetch(GAS_WEB_APP_URL);
+                    if (res.ok) {
+                        const onlineData = await res.json();
+                        if (Array.isArray(onlineData)) {
+                            const onlineScores = onlineData.filter(s => s.mode === mode);
+                            if (onlineScores.length > 0) {
+                                displayList(onlineScores);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn("オンラインランキング取得失敗（ローカル表示中）:", e);
                 }
-            });
+            }
         }
 
-        function escapeHtml(str) {
-            return String(str || '').replace(/[&<>"']/g, match => {
-                const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-                return map[match];
-            });
+        function sendToGoogleSheet(data) {
+            if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("YOUR_GAS_URL_HERE")) return;
+            try {
+                fetch(GAS_WEB_APP_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify(data)
+                }).then(() => {
+                    document.getElementById('sheet-status')?.classList.remove('hidden');
+                    // スプレッドシート反映後、ランキングを再読み込み
+                    setTimeout(() => {
+                        renderLeaderboardList('result-leaderboard', currentMode);
+                    }, 1000);
+                }).catch(err => console.log("Sheet send error:", err));
+            } catch (e) {
+                console.error("Sheet send error:", e);
+            }
         }
 
-        function startConfetti() {
-            const canvas = document.getElementById("confetti-canvas");
+        function generateQuestions(mode, count = 30) {
+            const qList = [];
+            const availableModes = ['add1_1', 'kuku', 'div2_1', 'sub2_1', 'add2_1', 'add2_2', 'mul2_1'];
+            
+            for (let i = 0; i < count; i++) {
+                let m = mode === 'mix' ? availableModes[Math.floor(Math.random() * availableModes.length)] : mode;
+                let q = {};
+                if (m === 'add1_1') {
+                    let a = Math.floor(Math.random() * 9) + 1;
+                    let b = Math.floor(Math.random() * 9) + 1;
+                    q = { num1: a, op: '+', num2: b, ans: a + b, cat: MODE_NAMES['add1_1'] };
+                } else if (m === 'kuku') {
+                    let a = Math.floor(Math.random() * 9) + 1;
+                    let b = Math.floor(Math.random() * 9) + 1;
+                    q = { num1: a, op: '×', num2: b, ans: a * b, cat: MODE_NAMES['kuku'] };
+                } else if (m === 'div2_1') {
+                    let b = Math.floor(Math.random() * 8) + 2; // 2..9
+                    let ans = Math.floor(Math.random() * 9) + 1; // 1..9
+                    let a = b * ans;
+                    q = { num1: a, op: '÷', num2: b, ans: ans, cat: MODE_NAMES['div2_1'] };
+                } else if (m === 'sub2_1') {
+                    let a = Math.floor(Math.random() * 89) + 10; // 10..98
+                    let b = Math.floor(Math.random() * 9) + 1; // 1..9
+                    q = { num1: a, op: '－', num2: b, ans: a - b, cat: MODE_NAMES['sub2_1'] };
+                } else if (m === 'add2_1') {
+                    let a = Math.floor(Math.random() * 89) + 10; // 10..98
+                    let b = Math.floor(Math.random() * 9) + 1; // 1..9
+                    q = { num1: a, op: '+', num2: b, ans: a + b, cat: MODE_NAMES['add2_1'] };
+                } else if (m === 'add2_2') {
+                    let a = Math.floor(Math.random() * 89) + 10;
+                    let b = Math.floor(Math.random() * 89) + 10;
+                    q = { num1: a, op: '+', num2: b, ans: a + b, cat: MODE_NAMES['add2_2'] };
+                } else if (m === 'mul2_1') {
+                    let a = Math.floor(Math.random() * 89) + 10; // 10..98
+                    let b = Math.floor(Math.random() * 9) + 1; // 1..9
+                    q = { num1: a, op: '×', num2: b, ans: a * b, cat: MODE_NAMES['mul2_1'] };
+                }
+                qList.push(q);
+            }
+            return qList;
+        }
+
+        function runConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
             if (!canvas) return;
-            const ctx = canvas.getContext("2d");
+            const ctx = canvas.getContext('2d');
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-
-            const particles = [];
-            const colors = ['#f43f5e', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'];
-
-            for (let i = 0; i < 70; i++) {
-                particles.push({
-                    x: canvas.width / 2,
-                    y: canvas.height / 2,
-                    vx: (Math.random() - 0.5) * 12,
-                    vy: (Math.random() - 0.8) * 12,
+            const pieces = [];
+            const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+            for (let i = 0; i < 90; i++) {
+                pieces.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
                     size: Math.random() * 8 + 4,
                     color: colors[Math.floor(Math.random() * colors.length)],
-                    rotation: Math.random() * 360,
-                    rSpeed: (Math.random() - 0.5) * 10
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: Math.random() * 4 + 3,
+                    rot: Math.random() * 360,
+                    vRot: (Math.random() - 0.5) * 10
                 });
             }
-
-            const startTime = Date.now();
-
+            let start = Date.now();
             function render() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                particles.forEach(p => {
+                pieces.forEach(p => {
                     p.x += p.vx;
                     p.y += p.vy;
-                    p.vy += 0.25;
-                    p.rotation += p.rSpeed;
-
+                    p.rot += p.vRot;
                     ctx.save();
                     ctx.translate(p.x, p.y);
-                    ctx.rotate((p.rotation * Math.PI) / 180);
+                    ctx.rotate((p.rot * Math.PI) / 180);
                     ctx.fillStyle = p.color;
                     ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
                     ctx.restore();
                 });
-
-                if (Date.now() - startTime < 2200) {
+                if (Date.now() - start < 3500) {
                     requestAnimationFrame(render);
                 } else {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                 }
             }
-
             render();
         }
+
+        let currentMode = 'mix';
+        let studentName = getStorageItem('math_student_name', '');
+        let questions = [];
+        let currentQIndex = 0;
+        let missCount = 0;
+        let inputBuffer = '';
+        let wrongQuestions = [];
+        let startTime = 0;
+        let timerInterval = null;
+
+        const nameInput = document.getElementById('student-name');
+        if (nameInput && studentName) {
+            nameInput.value = studentName;
+        }
+
+        // Mode selector button clicks
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                initAudio();
+                document.querySelectorAll('.mode-btn').forEach(b => {
+                    b.classList.remove('bg-amber-500', 'text-white', 'border-amber-500', 'font-black');
+                    b.classList.add('bg-amber-50', 'text-amber-900', 'border-amber-200');
+                });
+                const target = e.currentTarget;
+                target.classList.remove('bg-amber-50', 'text-amber-900', 'border-amber-200');
+                target.classList.add('bg-amber-500', 'text-white', 'border-amber-500', 'font-black');
+
+                currentMode = target.dataset.mode;
+                document.getElementById('start-mode-label').innerText = MODE_NAMES[currentMode];
+                renderLeaderboardList('start-leaderboard', currentMode);
+            });
+        });
+
+        // Initialize Start Leaderboard
+        renderLeaderboardList('start-leaderboard', currentMode);
+
+        function handleInput(key) {
+            initAudio();
+            if (key === 'clear') {
+                inputBuffer = '';
+            } else if (key === 'enter') {
+                submitAnswer();
+                return;
+            } else if (/^[0-9]$/.test(key)) {
+                if (inputBuffer.length < 4) {
+                    inputBuffer += key;
+                }
+            }
+            updateInputDisplay();
+        }
+
+        function updateInputDisplay() {
+            const display = document.getElementById('answer-input');
+            if (display) {
+                display.innerText = inputBuffer;
+            }
+        }
+
+        function submitAnswer() {
+            if (inputBuffer === '') return;
+
+            const q = questions[currentQIndex];
+            const userAns = parseInt(inputBuffer, 10);
+
+            if (userAns === q.ans) {
+                playSound('correct');
+                inputBuffer = '';
+                updateInputDisplay();
+                currentQIndex++;
+
+                if (currentQIndex >= questions.length) {
+                    finishGame();
+                } else {
+                    displayQuestion();
+                }
+            } else {
+                playSound('wrong');
+                missCount++;
+                showPenaltyToast();
+
+                // Save wrong question for review
+                wrongQuestions.push({
+                    expr: `${q.num1} ${q.op} ${q.num2}`,
+                    correctAns: q.ans,
+                    userAns: userAns
+                });
+
+                document.getElementById('miss-count').innerText = missCount;
+                document.getElementById('penalty-sec').innerText = missCount * 10;
+
+                inputBuffer = '';
+                updateInputDisplay();
+            }
+        }
+
+        function displayQuestion() {
+            const q = questions[currentQIndex];
+            document.getElementById('current-q-num').innerText = currentQIndex + 1;
+            document.getElementById('q-category').innerText = q.cat;
+            document.getElementById('q-expression').innerText = `${q.num1} ${q.op} ${q.num2} =`;
+            document.getElementById('answer-input').innerText = '';
+
+            const progress = ((currentQIndex) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+        }
+
+        function startGame() {
+            const name = nameInput.value.trim();
+            if (!name) {
+                document.getElementById('name-error-msg')?.classList.remove('hidden');
+                return;
+            }
+            document.getElementById('name-error-msg')?.classList.add('hidden');
+            studentName = name;
+            setStorageItem('math_student_name', studentName);
+
+            questions = generateQuestions(currentMode, 30);
+            currentQIndex = 0;
+            missCount = 0;
+            inputBuffer = '';
+            wrongQuestions = [];
+
+            document.getElementById('miss-count').innerText = '0';
+            document.getElementById('penalty-sec').innerText = '0';
+            document.getElementById('progress-bar').style.width = '0%';
+
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-result').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+
+            displayQuestion();
+
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const now = Date.now();
+                const elapsed = now - startTime;
+                document.getElementById('timer-display').innerText = formatTime(elapsed);
+            }, 100);
+        }
+
+        function finishGame() {
+            clearInterval(timerInterval);
+            const rawTimeMs = Date.now() - startTime;
+            const penaltyMs = missCount * 10000;
+            const finalTimeMs = rawTimeMs + penaltyMs;
+
+            playSound('fanfare');
+            runConfetti();
+
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-result').classList.remove('hidden');
+
+            document.getElementById('result-student-name').innerText = `おつかれさま！ ${studentName} さん`;
+            document.getElementById('res-raw-time').innerText = formatTime(rawTimeMs);
+            document.getElementById('res-miss-count').innerText = missCount;
+            document.getElementById('res-penalty').innerText = `+${missCount * 10}秒`;
+            document.getElementById('res-final-time').innerText = formatTime(finalTimeMs);
+
+            // Review List setup
+            const reviewBox = document.getElementById('review-box');
+            const reviewList = document.getElementById('review-list');
+            if (wrongQuestions.length > 0) {
+                reviewBox.classList.remove('hidden');
+                let rHtml = '';
+                wrongQuestions.forEach(item => {
+                    rHtml += `
+                        <div class="flex justify-between items-center text-xs bg-white p-2 rounded-lg border border-rose-100">
+                            <span class="font-bold text-gray-700">${item.expr}</span>
+                            <span>あなたの答え: <span class="text-rose-600 font-bold">${item.userAns}</span> （正解: <span class="text-emerald-600 font-bold">${item.correctAns}</span>）</span>
+                        </div>
+                    `;
+                });
+                reviewList.innerHTML = rHtml;
+            } else {
+                reviewBox.classList.add('hidden');
+            }
+
+            // Save record
+            const record = {
+                name: studentName,
+                mode: currentMode,
+                rawTime: rawTimeMs / 1000,
+                missCount: missCount,
+                finalTime: finalTimeMs / 1000,
+                date: new Date().toLocaleDateString('ja-JP')
+            };
+
+            saveLocalScore(record);
+            renderLeaderboardList('result-leaderboard', currentMode);
+
+            // Send to Google Sheets if GAS configured
+            sendToGoogleSheet(record);
+        }
+
+        document.getElementById('btn-start').addEventListener('click', () => {
+            initAudio();
+            startGame();
+        });
+
+        document.getElementById('btn-retry').addEventListener('click', () => {
+            initAudio();
+            document.getElementById('screen-result').classList.add('hidden');
+            document.getElementById('screen-start').classList.remove('hidden');
+            renderLeaderboardList('start-leaderboard', currentMode);
+        });
+
+        // Keypad buttons
+        document.querySelectorAll('.key-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const key = e.currentTarget.dataset.key;
+                handleInput(key);
+            });
+        });
+
+        // Physical Keyboard Support
+        window.addEventListener('keydown', (e) => {
+            if (document.getElementById('screen-game').classList.contains('hidden')) return;
+
+            if (e.key >= '0' && e.key <= '9') {
+                handleInput(e.key);
+            } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                handleInput('clear');
+            } else if (e.key === 'Enter') {
+                handleInput('enter');
+            }
+        });
+
+        // Ranking Modal logic
+        const modalRanking = document.getElementById('modal-ranking');
+        document.getElementById('btn-open-ranking').addEventListener('click', () => {
+            initAudio();
+            modalRanking.classList.remove('hidden');
+            renderLeaderboardList('modal-leaderboard-list', currentMode, 20);
+        });
+
+        document.getElementById('btn-close-ranking').addEventListener('click', () => {
+            modalRanking.classList.add('hidden');
+        });
+
+        document.querySelectorAll('.rank-tab-btn').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                initAudio();
+                document.querySelectorAll('.rank-tab-btn').forEach(t => {
+                    t.classList.remove('bg-amber-500', 'text-white');
+                    t.classList.add('bg-amber-100', 'text-amber-800');
+                });
+                e.currentTarget.classList.remove('bg-amber-100', 'text-amber-800');
+                e.currentTarget.classList.add('bg-amber-500', 'text-white');
+
+                const targetMode = e.currentTarget.dataset.mode;
+                renderLeaderboardList('modal-leaderboard-list', targetMode, 20);
+            });
+        });
     </script>
 </body>
 </html>
