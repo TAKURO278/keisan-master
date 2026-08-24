@@ -57,10 +57,8 @@
                     <i class="fa-solid fa-calculator text-amber-500"></i>
                     <span>けいさんマスター 30</span>
                 </h1>
-                <button id="btn-open-settings" class="btn-push bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold py-2 px-3 rounded-xl border border-slate-300 flex items-center gap-1" title="スプレッドシート連携設定">
-                    <i class="fa-solid fa-file-excel text-emerald-600"></i>
-                    <span class="hidden sm:inline">シート連携</span>
-                </button>
+                <!-- ボタン削除後の左右バランス保持スペース -->
+                <div class="w-20 sm:w-24"></div>
             </div>
         </header>
 
@@ -280,84 +278,18 @@
         </div>
     </div>
 
-    <!-- Settings Modal -->
-    <div id="modal-settings" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl border-4 border-emerald-300 space-y-3 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="text-base sm:text-lg font-black text-emerald-700 flex items-center gap-2">
-                    <i class="fa-solid fa-file-excel text-emerald-600"></i> Googleスプレッドシート連携設定
-                </h3>
-                <button id="btn-close-settings" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
-            </div>
-            
-            <p class="text-xs text-gray-600 leading-relaxed">
-                Google Apps Script (GAS) のウェブアプリURLを設定すると、テスト結果（<b>日付・名前・モード・記録・ミス数</b>）が自動的にスプレッドシートへ送信されます。
-            </p>
-
-            <div class="space-y-1">
-                <label for="gas-url-input" class="block text-xs font-bold text-gray-700">ウェブアプリ URL (GAS)</label>
-                <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/.../exec" 
-                    class="w-full text-xs p-2.5 rounded-xl border-2 border-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 font-mono">
-            </div>
-
-            <!-- GAS Code Snippet Accordion -->
-            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-slate-700">📋 Apps Script 用コード (コピー用)</span>
-                    <button id="btn-copy-gas" type="button" class="btn-push text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1 px-2.5 rounded-lg">
-                        コードをコピー
-                    </button>
-                </div>
-                <textarea id="gas-code-text" readonly class="w-full h-28 text-[10px] font-mono bg-slate-900 text-emerald-400 p-2 rounded-lg leading-tight focus:outline-none">
-var SPREADSHEET_ID = ""; // 空欄の場合はこのGASがバインドされているシートを使用
-
-function doPost(e) {
-  try {
-    var data = JSON.parse(e.postData.contents);
-    var ss = SPREADSHEET_ID ? SpreadsheetApp.openById(SPREADSHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getActiveSheet();
-    
-    sheet.appendRow([
-      data.date || new Date().toLocaleDateString('ja-JP'),
-      data.name || "名前なし",
-      data.mode || "-",
-      data.timeText || "-",
-      data.missCount !== undefined ? data.missCount : 0
-    ]);
-    
-    return ContentService.createTextOutput(JSON.stringify({result: "success"}))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch(err) {
-    return ContentService.createTextOutput(JSON.stringify({result: "error", error: err.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-                </textarea>
-            </div>
-
-            <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200 text-[11px] text-emerald-900 space-y-1">
-                <p class="font-bold">💡 簡単設定手順:</p>
-                <ol class="list-decimal pl-4 space-y-0.5">
-                    <li>スプレッドシートで「拡張機能」➔「Apps Script」を開く</li>
-                    <li>上の【コードをコピー】を押し、Apps Scriptに貼り付けて保存</li>
-                    <li>右上の「デプロイ」➔「新しいデプロイ」➔「ウェブアプリ」を選択</li>
-                    <li>アクセス可能者を<b>「全員」</b>にしてデプロイを実行</li>
-                    <li>発行されたURL（末尾が <code>/exec</code>）を上記に入力して保存！</li>
-                </ol>
-            </div>
-
-            <div class="flex gap-2 pt-1">
-                <button id="btn-save-settings" class="btn-push w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-sm">
-                    URLを保存する
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Canvas Confetti Overlay -->
     <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
 
     <script type="module">
+        // =========================================================================
+        // 📊 【管理者用】Googleスプレッドシート連携設定
+        // 発行された Google Apps Script (GAS) のウェブアプリURL（末尾が /exec のもの）を
+        // 以下のダブルクォーテーションの間に直接貼り付けて保存してください。
+        // （例: "https://script.google.com/macros/s/AKfycb.../exec"）
+        // =========================================================================
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbywnWVBXLcVHrFs181lXobKabfVrjtX_KvneCJQirYKxu1OomnCfP2UJOsVQ54vZyHseA/exec"; 
+
         let db = null;
         let auth = null;
         let appId = typeof __app_id !== 'undefined' ? __app_id : 'math-drill-app';
@@ -765,15 +697,6 @@ function doPost(e) {
             saveScore(studentName, selectedMode, finalTimeSec, rawTimeSec, missCount);
         }
 
-        function alertModal(msg) {
-            const modal = document.getElementById("custom-alert-modal");
-            const msgEl = document.getElementById("custom-alert-msg");
-            if (modal && msgEl) {
-                msgEl.textContent = msg;
-                modal.classList.remove("hidden");
-            }
-        }
-
         const customAlertBtn = document.getElementById("custom-alert-btn");
         if (customAlertBtn) {
             customAlertBtn.addEventListener("click", () => {
@@ -781,52 +704,8 @@ function doPost(e) {
             });
         }
 
-        const btnOpenSettings = document.getElementById("btn-open-settings");
-        const btnCloseSettings = document.getElementById("btn-close-settings");
-        const modalSettings = document.getElementById("modal-settings");
-        const gasUrlInput = document.getElementById("gas-url-input");
-        const btnSaveSettings = document.getElementById("btn-save-settings");
-        const btnCopyGas = document.getElementById("btn-copy-gas");
-
-        if (btnOpenSettings) {
-            btnOpenSettings.addEventListener("click", () => {
-                gasUrlInput.value = getStorageItem("math_drill_gas_url", "");
-                modalSettings.classList.remove("hidden");
-            });
-        }
-
-        if (btnCloseSettings) {
-            btnCloseSettings.addEventListener("click", () => {
-                modalSettings.classList.add("hidden");
-            });
-        }
-
-        if (btnSaveSettings) {
-            btnSaveSettings.addEventListener("click", () => {
-                const url = gasUrlInput.value.trim();
-                setStorageItem("math_drill_gas_url", url);
-                modalSettings.classList.add("hidden");
-                alertModal("スプレッドシート連携URLを保存しました！");
-            });
-        }
-
-        if (btnCopyGas) {
-            btnCopyGas.addEventListener("click", () => {
-                const codeArea = document.getElementById("gas-code-text");
-                if (codeArea) {
-                    codeArea.select();
-                    try {
-                        document.execCommand('copy');
-                        alertModal("GASコードをコピーしました！\nApps Script画面に貼り付けて保存・デプロイを行ってください。");
-                    } catch(e) {
-                        alertModal("手動で枠内のコードを選択してコピーしてください。");
-                    }
-                }
-            });
-        }
-
         function sendToGoogleSheet(record) {
-            const gasUrl = getStorageItem("math_drill_gas_url", "");
+            const gasUrl = typeof GAS_WEB_APP_URL !== 'undefined' ? GAS_WEB_APP_URL.trim() : "";
             const sheetStatus = document.getElementById("sheet-status");
             if (sheetStatus) sheetStatus.classList.add("hidden");
 
