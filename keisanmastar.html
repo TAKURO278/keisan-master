@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>けいさんマスター 30 - タイムアタック</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@500;700&family=M+PLUS+Rounded+1c:wght@700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'M PLUS Rounded 1c', 'Kiwi Maru', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .btn-push {
+            transition: all 0.1s ease;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+        }
+        .btn-push:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+        }
+        .animate-bounce-short {
+            animation: bounceShort 0.4s ease infinite alternate;
+        }
+        @keyframes bounceShort {
+            from { transform: translateY(0); }
+            to { transform: translateY(-8px); }
+        }
+        .penalty-pop {
+            animation: floatUp 0.8s ease-out forwards;
+        }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50px) scale(1.3); }
+        }
+    </style>
+</head>
+<body class="bg-amber-50 min-h-screen text-slate-800 flex flex-col justify-between">
+
+    <!-- Main Container -->
+    <div id="app" class="max-w-xl mx-auto w-full p-4 flex-grow flex flex-col justify-center">
+
+        <!-- Header Title -->
+        <header class="text-center my-3">
+            <div class="flex items-center justify-between gap-2">
+                <button id="btn-open-ranking" class="btn-push bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs sm:text-sm font-bold py-2 px-3 rounded-xl border border-amber-300 flex items-center gap-1">
+                    <i class="fa-solid fa-trophy text-yellow-500"></i>
+                    <span>ランキング</span>
+                </button>
+                <h1 class="text-xl md:text-2xl font-black text-amber-600 drop-shadow flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-calculator text-amber-500"></i>
+                    <span>けいさんマスター 30</span>
+                </h1>
+                <button id="btn-open-settings" class="btn-push bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold py-2 px-3 rounded-xl border border-slate-300 flex items-center gap-1" title="スプレッドシート連携設定">
+                    <i class="fa-solid fa-file-excel text-emerald-600"></i>
+                    <span class="hidden sm:inline">シート連携</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 1. START SCREEN -->
+        <div id="screen-start" class="bg-white rounded-3xl p-5 sm:p-6 shadow-xl border-4 border-amber-300 text-center space-y-5">
+            <div class="bg-amber-100 rounded-2xl p-4 border-2 border-amber-200">
+                <p class="text-amber-800 font-bold text-base sm:text-lg mb-1">🎓 まいにちの計算タイムアタック</p>
+                <ul class="text-xs sm:text-sm text-left text-amber-900 space-y-1 pl-4 list-disc font-medium">
+                    <li>全<b>30問</b>の計算タイムアタック！</li>
+                    <li>間違えると <b>+10秒のペナルティ！</b></li>
+                    <li>すばやく正確に答えを入力しよう！</li>
+                </ul>
+            </div>
+
+            <!-- Mode Selector -->
+            <div class="space-y-2 text-left">
+                <label class="block font-bold text-gray-700 text-xs sm:text-sm pl-1">
+                    <i class="fa-solid fa-list-check text-amber-500"></i> モードをえらんでね：
+                </label>
+                <div id="mode-selector-grid" class="grid grid-cols-2 gap-2 text-xs sm:text-sm font-bold">
+                    <button type="button" class="mode-btn btn-push p-2.5 rounded-xl border-2 border-amber-500 bg-amber-500 text-white font-black shadow" data-mode="mix">
+                        🧩 ぜんぶミックス
+                    </button>
+                    <button type="button" class="mode-btn btn-push p-2.5 rounded-xl border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900" data-mode="add1_1">
+                        ➕ 1けた ＋ 1けた
+                    </button>
+                    <button type="button" class="mode-btn btn-push p-2.5 rounded-xl border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900" data-mode="kuku">
+                        ✖️ 九九（かけ算）
+                    </button>
+                    <button type="button" class="mode-btn btn-push p-2.5 rounded-xl border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900" data-mode="div2_1">
+                        ➗ 2けた ÷ 1けた
+                    </button>
+                    <button type="button" class="mode-btn btn-push p-2.5 rounded-xl border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900" data-mode="sub2_1">
+                        ➖ 2けた － 1けた
+                    </button>
+                    <button type="button" class="mode-btn btn-push p-2.5 rounded-xl border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900" data-mode="add2_1">
+                        ➕ 2けた ＋ 1けた
+                    </button>
+                    <button type="button" class="mode-btn btn-push p-2.5 rounded-xl border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900 col-span-2" data-mode="add2_2">
+                        ➕ 2けた ＋ 2けた
+                    </button>
+                </div>
+            </div>
+
+            <!-- Student Name Input -->
+            <div class="space-y-1.5">
+                <label for="student-name" class="block font-bold text-gray-700 text-xs sm:text-sm text-left pl-1">
+                    <i class="fa-solid fa-user-pen text-amber-500"></i> なまえをいれてね：
+                </label>
+                <input type="text" id="student-name" placeholder="例：たなか たろう" 
+                    class="w-full text-center text-lg sm:text-xl font-bold py-2.5 px-4 rounded-xl border-2 border-amber-300 focus:outline-none focus:ring-4 focus:ring-amber-400 bg-amber-50">
+                <p id="name-error-msg" class="hidden text-xs text-rose-600 font-bold pl-1">⚠️ なまえをにゅうりょくしてね！</p>
+            </div>
+
+            <!-- Start Button -->
+            <button id="btn-start" class="btn-push w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xl sm:text-2xl py-3.5 rounded-2xl border-b-4 border-emerald-700 flex items-center justify-center gap-3">
+                <i class="fa-solid fa-play"></i> スタート！
+            </button>
+
+            <!-- Leaderboard Section on Start Screen -->
+            <div class="mt-4 pt-4 border-t-2 border-gray-100">
+                <h3 class="font-bold text-amber-700 text-sm flex items-center justify-center gap-2 mb-2">
+                    <i class="fa-solid fa-trophy text-yellow-500"></i> ランキング (<span id="start-mode-label">ぜんぶミックス</span>)
+                </h3>
+                <div id="start-leaderboard" class="max-h-40 overflow-y-auto space-y-1.5 text-xs text-left px-1">
+                    <p class="text-center text-gray-400 py-3">読み込み中...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. GAME PLAY SCREEN -->
+        <div id="screen-game" class="hidden bg-white rounded-3xl p-4 sm:p-5 shadow-xl border-4 border-indigo-200 relative overflow-hidden">
+            
+            <!-- Penalty Popup Toast Container -->
+            <div id="penalty-toast-container" class="absolute top-1/2 left-1/2 z-50 pointer-events-none"></div>
+
+            <!-- Top Stats Bar -->
+            <div class="flex justify-between items-center bg-indigo-50 p-2.5 sm:p-3 rounded-2xl mb-3 border border-indigo-100">
+                <div class="text-left">
+                    <span class="text-[10px] sm:text-xs text-indigo-500 font-bold block">もんだい</span>
+                    <span class="text-lg sm:text-xl font-black text-indigo-700"><span id="current-q-num">1</span> / 30</span>
+                </div>
+
+                <div class="text-center">
+                    <span class="text-[10px] sm:text-xs text-rose-500 font-bold block">ミス（ペナルティ）</span>
+                    <span class="text-lg sm:text-xl font-black text-rose-600"><span id="miss-count">0</span> <span class="text-xs">回 (+<span id="penalty-sec">0</span>秒)</span></span>
+                </div>
+
+                <div class="text-right">
+                    <span class="text-[10px] sm:text-xs text-indigo-500 font-bold block">タイム</span>
+                    <span id="timer-display" class="text-xl sm:text-2xl font-black font-mono text-indigo-900">00:00.0</span>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-200 h-2.5 sm:h-3 rounded-full mb-4 overflow-hidden">
+                <div id="progress-bar" class="bg-indigo-500 h-full transition-all duration-200" style="width: 0%;"></div>
+            </div>
+
+            <!-- Question Box -->
+            <div class="text-center py-5 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 mb-5">
+                <span id="q-category" class="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold mb-2">
+                    1けた ＋ 1けた
+                </span>
+                <div class="text-3xl sm:text-5xl font-black text-slate-800 tracking-wider flex items-center justify-center gap-2 sm:gap-3">
+                    <span id="q-expression">7 + 8 =</span>
+                    <span id="answer-input" class="inline-block min-w-[80px] sm:min-w-[90px] border-b-4 border-indigo-500 text-indigo-600 bg-indigo-50/50 px-2 rounded min-h-[1.2em]"></span>
+                </div>
+            </div>
+
+            <!-- Keypad -->
+            <div class="grid grid-cols-3 gap-2 sm:gap-2.5 max-w-xs mx-auto">
+                <button class="key-btn btn-push bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-2xl py-2.5 sm:py-3 rounded-xl border-b-2 border-slate-300" data-key="7">7</button>
+                <button class="key-btn btn-push bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-2xl py-2.5 sm:py-3 rounded-xl border-b-2 border-slate-300" data-key="8">8</button>
+                <button class="key-btn btn-push bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-2xl py-2.5 sm:py-3 rounded-xl border-b-2 border-slate-300" data-key="9">9</button>
+                
+                <button class="key-btn btn-push bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-2xl py-2.5 sm:py-3 rounded-xl border-b-2 border-slate-300" data-key="4">4</button>
+                <button class="key-btn btn-push bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-2xl py-2.5 sm:py-3 rounded-xl border-b-2 border-slate-300" data-key="5">5</button>
+                <button class="key-btn btn-push bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-2xl py-2.5 sm:py-3 rounded-xl border-b-2 border-slate-300" data-key="6">6</button>
+                
+                <button class="key-btn btn-push bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-2xl py-2.5 sm:py-3 rounded-xl border-b-2 border-slate-300" data-key="1">1</button>
+                <button class="key-btn btn-push bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-2xl py-2.5 sm:py-3 rounded-xl border-b-2 border-slate-300" data-key="2">2</button>
+                <button class="key-btn btn-push bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-2xl py-2.5 sm:py-3 rounded-xl border-b-2 border-slate-300" data-key="3">3</button>
+                
+                <button class="key-btn btn-push bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-base sm:text-lg py-2.5 sm:py-3 rounded-xl border-b-2 border-amber-300" data-key="clear">けす</button>
+                <button class="key-btn btn-push bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-2xl py-2.5 sm:py-3 rounded-xl border-b-2 border-slate-300" data-key="0">0</button>
+                <button class="key-btn btn-push bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-base sm:text-lg py-2.5 sm:py-3 rounded-xl border-b-2 border-indigo-700" data-key="enter">つぎへ</button>
+            </div>
+        </div>
+
+        <!-- 3. RESULT SCREEN -->
+        <div id="screen-result" class="hidden bg-white rounded-3xl p-5 sm:p-6 shadow-xl border-4 border-yellow-300 text-center space-y-4">
+            <div class="animate-bounce-short">
+                <span class="text-4xl sm:text-5xl">🎉</span>
+                <h2 class="text-2xl sm:text-3xl font-black text-amber-600 mt-1">ゴール！</h2>
+                <p id="result-student-name" class="font-bold text-gray-600 text-sm sm:text-base"></p>
+            </div>
+
+            <!-- Score Summary Card -->
+            <div class="bg-amber-50 p-3.5 rounded-2xl border-2 border-amber-200 space-y-1.5">
+                <div class="flex justify-between items-center text-xs sm:text-sm text-amber-900 border-b border-amber-200 pb-1">
+                    <span>かかった時間</span>
+                    <span id="res-raw-time" class="font-bold font-mono">00:00.0</span>
+                </div>
+                <div class="flex justify-between items-center text-xs sm:text-sm text-rose-600 border-b border-amber-200 pb-1">
+                    <span>ペナルティ (<span id="res-miss-count">0</span>回 × 10秒)</span>
+                    <span id="res-penalty" class="font-bold font-mono">+0秒</span>
+                </div>
+                <div class="flex justify-between items-center text-lg sm:text-xl font-black text-indigo-900 pt-0.5">
+                    <span>きろくタイム</span>
+                    <span id="res-final-time" class="text-xl sm:text-2xl text-indigo-600 font-mono">00:00.0</span>
+                </div>
+            </div>
+
+            <!-- Sheet Sending Status Badge -->
+            <div id="sheet-status" class="hidden text-xs bg-emerald-100 text-emerald-800 font-bold py-2 px-3 rounded-xl border border-emerald-300 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-circle-check text-emerald-600"></i> Googleスプレッドシートに記録を自動送信しました！
+            </div>
+
+            <!-- Review Section for Incorrect Answers -->
+            <div id="review-box" class="hidden text-left space-y-1.5 bg-rose-50/50 p-3 rounded-2xl border border-rose-200">
+                <h4 class="font-bold text-xs text-rose-700 flex items-center gap-1">
+                    <i class="fa-solid fa-triangle-exclamation"></i> まちがえた問題の復習：
+                </h4>
+                <div id="review-list" class="space-y-1 max-h-36 overflow-y-auto pr-1"></div>
+            </div>
+
+            <!-- Result Leaderboard -->
+            <div class="pt-1">
+                <h3 class="font-bold text-amber-700 text-xs sm:text-sm mb-2 flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-trophy text-yellow-500"></i> このモードのランキング TOP 10
+                </h3>
+                <div id="result-leaderboard" class="max-h-36 overflow-y-auto space-y-1 text-xs text-left px-1"></div>
+            </div>
+
+            <!-- Retry Button -->
+            <button id="btn-retry" class="btn-push w-full bg-amber-500 hover:bg-amber-600 text-white font-black text-lg sm:text-xl py-3 rounded-2xl border-b-4 border-amber-700 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-rotate-right"></i> もういちど 挑戦する！
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Ranking Modal -->
+    <div id="modal-ranking" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl border-4 border-amber-300 space-y-4 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="text-base sm:text-lg font-black text-amber-700 flex items-center gap-2">
+                    <i class="fa-solid fa-trophy text-yellow-500"></i> 全体ランキング
+                </h3>
+                <button id="btn-close-ranking" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
+            </div>
+            
+            <!-- Modal Mode Tabs -->
+            <div id="modal-ranking-tabs" class="flex gap-1 overflow-x-auto pb-2 text-xs font-bold">
+                <button class="rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-500 text-white whitespace-nowrap" data-mode="mix">ぜんぶミックス</button>
+                <button class="rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 whitespace-nowrap" data-mode="add1_1">1けた＋1けた</button>
+                <button class="rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 whitespace-nowrap" data-mode="kuku">九九</button>
+                <button class="rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 whitespace-nowrap" data-mode="div2_1">2けた÷1けた</button>
+                <button class="rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 whitespace-nowrap" data-mode="sub2_1">2けた－1けた</button>
+                <button class="rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 whitespace-nowrap" data-mode="add2_1">2けた＋1けた</button>
+                <button class="rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 whitespace-nowrap" data-mode="add2_2">2けた＋2けた</button>
+            </div>
+
+            <!-- Modal Ranking Content List -->
+            <div id="modal-leaderboard-list" class="overflow-y-auto flex-grow space-y-1.5 text-xs sm:text-sm text-left pr-1 min-h-[200px]"></div>
+        </div>
+    </div>
+
+    <!-- Custom Alert Modal -->
+    <div id="custom-alert-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl p-5 max-w-xs w-full text-center shadow-xl border-2 border-amber-300 space-y-4">
+            <p id="custom-alert-msg" class="font-bold text-gray-800 text-sm leading-relaxed"></p>
+            <button id="custom-alert-btn" class="btn-push bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-xl text-sm">
+                OK
+            </button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="modal-settings" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl border-4 border-emerald-300 space-y-3 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="text-base sm:text-lg font-black text-emerald-700 flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel text-emerald-600"></i> Googleスプレッドシート連携設定
+                </h3>
+                <button id="btn-close-settings" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
+            </div>
+            
+            <p class="text-xs text-gray-600 leading-relaxed">
+                Google Apps Script (GAS) のウェブアプリURLを設定すると、テスト結果（<b>日付・名前・モード・記録・ミス数</b>）が自動的にスプレッドシートへ送信されます。
+            </p>
+
+            <div class="space-y-1">
+                <label for="gas-url-input" class="block text-xs font-bold text-gray-700">ウェブアプリ URL (GAS)</label>
+                <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/.../exec" 
+                    class="w-full text-xs p-2.5 rounded-xl border-2 border-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 font-mono">
+            </div>
+
+            <!-- GAS Code Snippet Accordion -->
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-700">📋 Apps Script 用コード (コピー用)</span>
+                    <button id="btn-copy-gas" type="button" class="btn-push text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1 px-2.5 rounded-lg">
+                        コードをコピー
+                    </button>
+                </div>
+                <textarea id="gas-code-text" readonly class="w-full h-28 text-[10px] font-mono bg-slate-900 text-emerald-400 p-2 rounded-lg leading-tight focus:outline-none">
+var SPREADSHEET_ID = ""; // 空欄の場合はこのGASがバインドされているシートを使用
+
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var ss = SPREADSHEET_ID ? SpreadsheetApp.openById(SPREADSHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getActiveSheet();
+    
+    sheet.appendRow([
+      data.date || new Date().toLocaleDateString('ja-JP'),
+      data.name || "名前なし",
+      data.mode || "-",
+      data.timeText || "-",
+      data.missCount !== undefined ? data.missCount : 0
+    ]);
+    
+    return ContentService.createTextOutput(JSON.stringify({result: "success"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({result: "error", error: err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+                </textarea>
+            </div>
+
+            <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200 text-[11px] text-emerald-900 space-y-1">
+                <p class="font-bold">💡 簡単設定手順:</p>
+                <ol class="list-decimal pl-4 space-y-0.5">
+                    <li>スプレッドシートで「拡張機能」➔「Apps Script」を開く</li>
+                    <li>上の【コードをコピー】を押し、Apps Scriptに貼り付けて保存</li>
+                    <li>右上の「デプロイ」➔「新しいデプロイ」➔「ウェブアプリ」を選択</li>
+                    <li>アクセス可能者を<b>「全員」</b>にしてデプロイを実行</li>
+                    <li>発行されたURL（末尾が <code>/exec</code>）を上記に入力して保存！</li>
+                </ol>
+            </div>
+
+            <div class="flex gap-2 pt-1">
+                <button id="btn-save-settings" class="btn-push w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-xl text-sm">
+                    URLを保存する
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas Confetti Overlay -->
+    <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+    <script type="module">
+        let db = null;
+        let auth = null;
+        let appId = typeof __app_id !== 'undefined' ? __app_id : 'math-drill-app';
+
+        // Safe localStorage helper for local file:// execution
+        function getStorageItem(key, fallback = "") {
+            try {
+                return localStorage.getItem(key) || fallback;
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        function setStorageItem(key, value) {
+            try {
+                localStorage.setItem(key, value);
+            } catch (e) {}
+        }
+
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                try {
+                    audioCtx = new AudioContext();
+                } catch(e) {}
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                if (type === 'correct') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'wrong') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.setValueAtTime(110, now + 0.1);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'fanfare') {
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        o.type = 'triangle';
+                        o.frequency.value = freq;
+                        const startTime = now + idx * 0.1;
+                        g.gain.setValueAtTime(0.2, startTime);
+                        g.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+                        o.start(startTime);
+                        o.stop(startTime + 0.3);
+                    });
+                }
+            } catch (e) {
+                console.error("Audio error:", e);
+            }
+        }
+
+        async function initFirebase() {
+            if (typeof __firebase_config !== 'undefined' && window.location.protocol !== 'file:') {
+                try {
+                    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js");
+                    const { getAuth, signInAnonymously, signInWithCustomToken } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+                    const { getFirestore, collection, addDoc, onSnapshot } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    listenToLeaderboard(collection, onSnapshot);
+                    return;
+                } catch (e) {
+                    console.warn("Firebase skipped or offline environment. Falling back to Local Storage.", e);
+                }
+            }
+            loadLocalLeaderboard();
+        }
+
+        initFirebase();
+
+        const LOCAL_RANKING_KEY = "math_drill_rankings";
+
+        // Game State Variables
+        let questions = [];
+        let currentQIndex = 0;
+        let missCount = 0;
+        let userInput = "";
+        let startTime = 0;
+        let timerInterval = null;
+        let elapsedMs = 0;
+        let wrongList = [];
+        let studentName = getStorageItem("math_drill_student_name", "");
+
+        let selectedMode = "mix";
+        let modalTabMode = "mix";
+        let allScores = [];
+
+        const MODE_NAMES = {
+            'mix': 'ぜんぶミックス',
+            'add1_1': '1けた ＋ 1けた',
+            'kuku': '九九（かけ算）',
+            'div2_1': '2けた ÷ 1けた',
+            'sub2_1': '2けた － 1けた',
+            'add2_1': '2けた ＋ 1けた',
+            'add2_2': '2けた ＋ 2けた'
+        };
+
+        function createQuestion(type) {
+            if (type === 'add1_1') {
+                const a = Math.floor(Math.random() * 9) + 1;
+                const b = Math.floor(Math.random() * 9) + 1;
+                return { category: '1けた ＋ 1けた', expr: `${a} + ${b} =`, answer: a + b };
+            } else if (type === 'kuku') {
+                const a = Math.floor(Math.random() * 9) + 1;
+                const b = Math.floor(Math.random() * 9) + 1;
+                return { category: '九九（かけ算）', expr: `${a} × ${b} =`, answer: a * b };
+            } else if (type === 'div2_1') {
+                const ans = Math.floor(Math.random() * 9) + 1;
+                const div = Math.floor(Math.random() * 8) + 2;
+                return { category: '2けた ÷ 1けた', expr: `${ans * div} ÷ ${div} =`, answer: ans };
+            } else if (type === 'sub2_1') {
+                const a = Math.floor(Math.random() * 89) + 10;
+                const b = Math.floor(Math.random() * 9) + 1;
+                return { category: '2けた － 1けた', expr: `${a} － ${b} =`, answer: a - b };
+            } else if (type === 'add2_1') {
+                const a = Math.floor(Math.random() * 89) + 10;
+                const b = Math.floor(Math.random() * 9) + 1;
+                return { category: '2けた ＋ 1けた', expr: `${a} + ${b} =`, answer: a + b };
+            } else if (type === 'add2_2') {
+                const a = Math.floor(Math.random() * 89) + 10;
+                const b = Math.floor(Math.random() * 89) + 10;
+                return { category: '2けた ＋ 2けた', expr: `${a} + ${b} =`, answer: a + b };
+            }
+        }
+
+        function generateQuestions(mode) {
+            const result = [];
+            if (mode === 'mix') {
+                const types = ['add1_1', 'kuku', 'div2_1', 'sub2_1', 'add2_1', 'add2_2'];
+                types.forEach(type => {
+                    for (let i = 0; i < 5; i++) {
+                        result.push(createQuestion(type));
+                    }
+                });
+                for (let i = result.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [result[i], result[j]] = [result[j], result[i]];
+                }
+            } else {
+                for (let i = 0; i < 30; i++) {
+                    result.push(createQuestion(mode));
+                }
+            }
+            return result;
+        }
+
+        // Mode selector button events
+        document.querySelectorAll(".mode-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll(".mode-btn").forEach(b => {
+                    b.classList.remove("bg-amber-500", "text-white", "border-amber-500", "font-black", "shadow");
+                    b.classList.add("bg-amber-50", "text-amber-900", "border-amber-200");
+                });
+                btn.classList.remove("bg-amber-50", "text-amber-900", "border-amber-200");
+                btn.classList.add("bg-amber-500", "text-white", "border-amber-500", "font-black", "shadow");
+                
+                selectedMode = btn.getAttribute("data-mode");
+                const labelEl = document.getElementById("start-mode-label");
+                if (labelEl) labelEl.textContent = MODE_NAMES[selectedMode];
+
+                renderLeaderboard(allScores);
+            });
+        });
+
+        // UI Reference Variables
+        const screenStart = document.getElementById("screen-start");
+        const screenGame = document.getElementById("screen-game");
+        const screenResult = document.getElementById("screen-result");
+
+        const inputName = document.getElementById("student-name");
+        const btnStart = document.getElementById("btn-start");
+        const btnRetry = document.getElementById("btn-retry");
+
+        const qNumEl = document.getElementById("current-q-num");
+        const missCountEl = document.getElementById("miss-count");
+        const penaltySecEl = document.getElementById("penalty-sec");
+        const timerDisplayEl = document.getElementById("timer-display");
+        const progressBarEl = document.getElementById("progress-bar");
+        const qCategoryEl = document.getElementById("q-category");
+        const qExpressionEl = document.getElementById("q-expression");
+        const answerInputEl = document.getElementById("answer-input");
+
+        if (studentName) {
+            inputName.value = studentName;
+        }
+
+        btnStart.addEventListener("click", startGame);
+        btnRetry.addEventListener("click", () => {
+            screenResult.classList.add("hidden");
+            screenStart.classList.remove("hidden");
+            renderLeaderboard(allScores);
+        });
+
+        document.querySelectorAll(".key-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                handleInputKey(btn.getAttribute("data-key"));
+            });
+        });
+
+        document.addEventListener("keydown", (e) => {
+            if (screenGame.classList.contains("hidden")) return;
+            if (e.key >= "0" && e.key <= "9") {
+                handleInputKey(e.key);
+            } else if (e.key === "Backspace" || e.key === "Delete") {
+                handleInputKey("clear");
+            } else if (e.key === "Enter") {
+                handleInputKey("enter");
+            }
+        });
+
+        function formatTime(ms) {
+            const totalSec = ms / 1000;
+            const mins = Math.floor(totalSec / 60);
+            const secs = (totalSec % 60).toFixed(1);
+            const padMins = String(mins).padStart(2, '0');
+            const padSecs = String(secs).padStart(4, '0');
+            return `${padMins}:${padSecs}`;
+        }
+
+        function startGame() {
+            const errorMsg = document.getElementById("name-error-msg");
+            if (errorMsg) errorMsg.classList.add("hidden");
+
+            const name = inputName.value.trim();
+            if (!name) {
+                if (errorMsg) errorMsg.classList.remove("hidden");
+                inputName.focus();
+                return;
+            }
+
+            studentName = name;
+            setStorageItem("math_drill_student_name", studentName);
+
+            initAudio();
+
+            questions = generateQuestions(selectedMode);
+            currentQIndex = 0;
+            missCount = 0;
+            userInput = "";
+            wrongList = [];
+            elapsedMs = 0;
+
+            screenStart.classList.add("hidden");
+            screenResult.classList.add("hidden");
+            screenGame.classList.remove("hidden");
+
+            updateUIForQuestion();
+
+            startTime = Date.now();
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                elapsedMs = Date.now() - startTime;
+                timerDisplayEl.textContent = formatTime(elapsedMs);
+            }, 100);
+        }
+
+        function updateUIForQuestion() {
+            const q = questions[currentQIndex];
+            qNumEl.textContent = currentQIndex + 1;
+            missCountEl.textContent = missCount;
+            penaltySecEl.textContent = missCount * 10;
+            
+            const progress = ((currentQIndex) / questions.length) * 100;
+            progressBarEl.style.width = `${progress}%`;
+
+            qCategoryEl.textContent = q.category;
+            qExpressionEl.textContent = q.expr;
+            userInput = "";
+            renderInput();
+        }
+
+        function renderInput() {
+            answerInputEl.textContent = userInput;
+        }
+
+        function triggerPenaltyAnimation() {
+            const container = document.getElementById("penalty-toast-container");
+            const toast = document.createElement("div");
+            toast.className = "penalty-pop absolute font-black text-2xl text-rose-600 bg-rose-100 border-2 border-rose-400 px-3 py-1 rounded-full shadow-lg whitespace-nowrap";
+            toast.textContent = "＋10秒！";
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 800);
+        }
+
+        function handleInputKey(key) {
+            initAudio();
+            if (key === "clear") {
+                userInput = "";
+            } else if (key === "enter") {
+                checkAnswer();
+                return;
+            } else {
+                if (userInput.length < 4) {
+                    userInput += key;
+                }
+            }
+            renderInput();
+        }
+
+        function checkAnswer() {
+            if (userInput.trim() === "") return;
+
+            const q = questions[currentQIndex];
+            const userNum = parseInt(userInput, 10);
+
+            if (userNum === q.answer) {
+                playSound('correct');
+                currentQIndex++;
+                if (currentQIndex >= questions.length) {
+                    endGame();
+                } else {
+                    updateUIForQuestion();
+                }
+            } else {
+                missCount++;
+                playSound('wrong');
+                triggerPenaltyAnimation();
+                wrongList.push({
+                    qIndex: currentQIndex + 1,
+                    expr: q.expr,
+                    userAns: userNum,
+                    correctAns: q.answer
+                });
+                userInput = "";
+                renderInput();
+                missCountEl.textContent = missCount;
+                penaltySecEl.textContent = missCount * 10;
+            }
+        }
+
+        function endGame() {
+            if (timerInterval) clearInterval(timerInterval);
+
+            const rawTimeSec = elapsedMs / 1000;
+            const penaltySec = missCount * 10;
+            const finalTimeSec = rawTimeSec + penaltySec;
+
+            playSound('fanfare');
+            startConfetti();
+
+            screenGame.classList.add("hidden");
+            screenResult.classList.remove("hidden");
+
+            document.getElementById("result-student-name").textContent = `${studentName} さんの記録`;
+            document.getElementById("res-raw-time").textContent = formatTime(elapsedMs);
+            document.getElementById("res-miss-count").textContent = missCount;
+            document.getElementById("res-penalty").textContent = `+${penaltySec}秒`;
+            document.getElementById("res-final-time").textContent = formatTime(finalTimeSec * 1000);
+
+            // Incorrect Questions Review List
+            const reviewBox = document.getElementById("review-box");
+            const reviewList = document.getElementById("review-list");
+            if (wrongList.length > 0) {
+                reviewBox.classList.remove("hidden");
+                reviewList.innerHTML = wrongList.map(item => `
+                    <div class="flex justify-between items-center text-xs bg-rose-100/70 p-1.5 rounded-lg border border-rose-200">
+                        <span class="font-bold text-rose-900">問${item.qIndex}: ${item.expr}</span>
+                        <span class="text-rose-700">誤: <s class="text-rose-500">${item.userAns}</s> ➔ 正: <b class="text-emerald-700">${item.correctAns}</b></span>
+                    </div>
+                `).join("");
+            } else {
+                reviewBox.classList.add("hidden");
+            }
+
+            saveScore(studentName, selectedMode, finalTimeSec, rawTimeSec, missCount);
+        }
+
+        function alertModal(msg) {
+            const modal = document.getElementById("custom-alert-modal");
+            const msgEl = document.getElementById("custom-alert-msg");
+            if (modal && msgEl) {
+                msgEl.textContent = msg;
+                modal.classList.remove("hidden");
+            }
+        }
+
+        const customAlertBtn = document.getElementById("custom-alert-btn");
+        if (customAlertBtn) {
+            customAlertBtn.addEventListener("click", () => {
+                document.getElementById("custom-alert-modal").classList.add("hidden");
+            });
+        }
+
+        const btnOpenSettings = document.getElementById("btn-open-settings");
+        const btnCloseSettings = document.getElementById("btn-close-settings");
+        const modalSettings = document.getElementById("modal-settings");
+        const gasUrlInput = document.getElementById("gas-url-input");
+        const btnSaveSettings = document.getElementById("btn-save-settings");
+        const btnCopyGas = document.getElementById("btn-copy-gas");
+
+        if (btnOpenSettings) {
+            btnOpenSettings.addEventListener("click", () => {
+                gasUrlInput.value = getStorageItem("math_drill_gas_url", "");
+                modalSettings.classList.remove("hidden");
+            });
+        }
+
+        if (btnCloseSettings) {
+            btnCloseSettings.addEventListener("click", () => {
+                modalSettings.classList.add("hidden");
+            });
+        }
+
+        if (btnSaveSettings) {
+            btnSaveSettings.addEventListener("click", () => {
+                const url = gasUrlInput.value.trim();
+                setStorageItem("math_drill_gas_url", url);
+                modalSettings.classList.add("hidden");
+                alertModal("スプレッドシート連携URLを保存しました！");
+            });
+        }
+
+        if (btnCopyGas) {
+            btnCopyGas.addEventListener("click", () => {
+                const codeArea = document.getElementById("gas-code-text");
+                if (codeArea) {
+                    codeArea.select();
+                    try {
+                        document.execCommand('copy');
+                        alertModal("GASコードをコピーしました！\nApps Script画面に貼り付けて保存・デプロイを行ってください。");
+                    } catch(e) {
+                        alertModal("手動で枠内のコードを選択してコピーしてください。");
+                    }
+                }
+            });
+        }
+
+        function sendToGoogleSheet(record) {
+            const gasUrl = getStorageItem("math_drill_gas_url", "");
+            const sheetStatus = document.getElementById("sheet-status");
+            if (sheetStatus) sheetStatus.classList.add("hidden");
+
+            if (!gasUrl) return;
+
+            const payload = {
+                date: record.dateStr,
+                name: record.studentName,
+                mode: MODE_NAMES[record.mode] || record.mode,
+                timeText: formatTime(record.totalTime * 1000),
+                rawTimeText: formatTime(record.rawTime * 1000),
+                missCount: record.missCount
+            };
+
+            // Using no-cors and text/plain to avoid CORS options preflight blocking
+            fetch(gasUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                if (sheetStatus) sheetStatus.classList.remove("hidden");
+            }).catch(err => {
+                console.error("Google Sheet error:", err);
+            });
+        }
+
+        async function saveScore(name, mode, totalTimeSec, rawTimeSec, miss) {
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
+
+            const record = {
+                studentName: name,
+                mode: mode,
+                totalTime: Math.round(totalTimeSec * 10) / 10,
+                rawTime: Math.round(rawTimeSec * 10) / 10,
+                missCount: miss,
+                dateStr: dateStr,
+                createdAt: new Date().toISOString()
+            };
+
+            sendToGoogleSheet(record);
+
+            if (db) {
+                try {
+                    const colPath = `artifacts/${appId}/public/data/rankings`;
+                    const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                    await addDoc(collection(db, colPath), record);
+                } catch (e) {
+                    saveLocalScore(record);
+                }
+            } else {
+                saveLocalScore(record);
+            }
+        }
+
+        function saveLocalScore(record) {
+            let list = [];
+            try {
+                list = JSON.parse(getStorageItem(LOCAL_RANKING_KEY, "[]"));
+            } catch (e) {
+                list = [];
+            }
+            list.push(record);
+            list.sort((a, b) => a.totalTime - b.totalTime);
+            list = list.slice(0, 100);
+            setStorageItem(LOCAL_RANKING_KEY, JSON.stringify(list));
+            allScores = list;
+            renderLeaderboard(list);
+        }
+
+        function loadLocalLeaderboard() {
+            let list = [];
+            try {
+                list = JSON.parse(getStorageItem(LOCAL_RANKING_KEY, "[]"));
+            } catch (e) {
+                list = [];
+            }
+            allScores = list;
+            renderLeaderboard(list);
+        }
+
+        function listenToLeaderboard(collection, onSnapshot) {
+            if (!db) return;
+            try {
+                const colPath = `artifacts/${appId}/public/data/rankings`;
+                onSnapshot(collection(db, colPath), (snapshot) => {
+                    const list = [];
+                    snapshot.forEach((doc) => {
+                        list.push(doc.data());
+                    });
+                    list.sort((a, b) => a.totalTime - b.totalTime);
+                    allScores = list;
+                    renderLeaderboard(list);
+                }, (error) => {
+                    loadLocalLeaderboard();
+                });
+            } catch (e) {
+                loadLocalLeaderboard();
+            }
+        }
+
+        function renderLeaderboard(list) {
+            allScores = list;
+            const filteredList = list.filter(item => (item.mode || 'mix') === selectedMode);
+
+            const containers = [
+                document.getElementById("start-leaderboard"),
+                document.getElementById("result-leaderboard")
+            ];
+
+            containers.forEach(container => {
+                if (!container) return;
+                container.innerHTML = "";
+
+                if (filteredList.length === 0) {
+                    container.innerHTML = `<p class="text-center text-gray-400 py-3">このモードの記録はまだありません</p>`;
+                    return;
+                }
+
+                filteredList.slice(0, 10).forEach((item, index) => {
+                    const rankNum = index + 1;
+                    let rankBadge = `<span class="w-6 text-center font-bold text-gray-500">${rankNum}</span>`;
+                    if (rankNum === 1) rankBadge = `<span class="w-6 text-center text-yellow-500 font-black"><i class="fa-solid fa-crown"></i></span>`;
+                    else if (rankNum === 2) rankBadge = `<span class="w-6 text-center text-slate-400 font-bold">2</span>`;
+                    else if (rankNum === 3) rankBadge = `<span class="w-6 text-center text-amber-600 font-bold">3</span>`;
+
+                    const row = document.createElement("div");
+                    row.className = "flex justify-between items-center bg-amber-50/70 p-1.5 sm:p-2 rounded-xl border border-amber-100 hover:bg-amber-100/50 transition";
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2 overflow-hidden">
+                            ${rankBadge}
+                            <span class="font-bold text-gray-800 truncate">${escapeHtml(item.studentName)}</span>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <span class="font-black font-mono text-indigo-700">${formatTime(item.totalTime * 1000)}</span>
+                            ${item.missCount > 0 ? `<span class="text-[10px] text-rose-500 block">(${item.missCount}ミス)</span>` : ''}
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+            });
+
+            renderModalLeaderboard();
+        }
+
+        function renderModalLeaderboard() {
+            const container = document.getElementById("modal-leaderboard-list");
+            if (!container) return;
+            container.innerHTML = "";
+
+            const filteredList = allScores.filter(item => (item.mode || 'mix') === modalTabMode);
+
+            if (filteredList.length === 0) {
+                container.innerHTML = `<p class="text-center text-gray-400 py-8">このモードの記録はまだありません</p>`;
+                return;
+            }
+
+            filteredList.forEach((item, index) => {
+                const rankNum = index + 1;
+                let rankBadge = `<span class="w-7 text-center font-bold text-gray-500">${rankNum}</span>`;
+                if (rankNum === 1) rankBadge = `<span class="w-7 text-center text-yellow-500 font-black text-lg"><i class="fa-solid fa-crown"></i></span>`;
+                else if (rankNum === 2) rankBadge = `<span class="w-7 text-center text-slate-400 font-bold">2</span>`;
+                else if (rankNum === 3) rankBadge = `<span class="w-7 text-center text-amber-600 font-bold">3</span>`;
+
+                const row = document.createElement("div");
+                row.className = "flex justify-between items-center bg-amber-50/70 p-2 rounded-xl border border-amber-100";
+                row.innerHTML = `
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        ${rankBadge}
+                        <div>
+                            <span class="font-bold text-gray-800 block truncate">${escapeHtml(item.studentName)}</span>
+                            <span class="text-[10px] text-gray-400 block">${escapeHtml(item.dateStr || '')}</span>
+                        </div>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <span class="font-black font-mono text-indigo-700 text-base">${formatTime(item.totalTime * 1000)}</span>
+                        ${item.missCount > 0 ? `<span class="text-[10px] text-rose-500 block">(${item.missCount}ミス)</span>` : '<span class="text-[10px] text-emerald-600 block">ノーミス!</span>'}
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        const btnOpenRanking = document.getElementById("btn-open-ranking");
+        const btnCloseRanking = document.getElementById("btn-close-ranking");
+        const modalRanking = document.getElementById("modal-ranking");
+
+        if (btnOpenRanking) {
+            btnOpenRanking.addEventListener("click", () => {
+                modalTabMode = selectedMode;
+                updateModalTabs();
+                renderModalLeaderboard();
+                modalRanking.classList.remove("hidden");
+            });
+        }
+
+        if (btnCloseRanking) {
+            btnCloseRanking.addEventListener("click", () => {
+                modalRanking.classList.add("hidden");
+            });
+        }
+
+        document.querySelectorAll(".rank-tab-btn").forEach(tab => {
+            tab.addEventListener("click", () => {
+                modalTabMode = tab.getAttribute("data-mode");
+                updateModalTabs();
+                renderModalLeaderboard();
+            });
+        });
+
+        function updateModalTabs() {
+            document.querySelectorAll(".rank-tab-btn").forEach(tab => {
+                if (tab.getAttribute("data-mode") === modalTabMode) {
+                    tab.className = "rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-500 text-white font-bold whitespace-nowrap shadow";
+                } else {
+                    tab.className = "rank-tab-btn px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 font-bold whitespace-nowrap";
+                }
+            });
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/[&<>"']/g, match => {
+                const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+                return map[match];
+            });
+        }
+
+        function startConfetti() {
+            const canvas = document.getElementById("confetti-canvas");
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const particles = [];
+            const colors = ['#f43f5e', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'];
+
+            for (let i = 0; i < 70; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 2,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.8) * 12,
+                    size: Math.random() * 8 + 4,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rotation: Math.random() * 360,
+                    rSpeed: (Math.random() - 0.5) * 10
+                });
+            }
+
+            const startTime = Date.now();
+
+            function render() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.25;
+                    p.rotation += p.rSpeed;
+
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate((p.rotation * Math.PI) / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                    ctx.restore();
+                });
+
+                if (Date.now() - startTime < 2200) {
+                    requestAnimationFrame(render);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+
+            render();
+        }
+    </script>
+</body>
+</html>
